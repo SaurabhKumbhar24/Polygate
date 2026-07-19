@@ -10,7 +10,7 @@ readme = "README.md"
 license = "MIT"
 requires-python = ">=3.8"
 authors = [
-    { name = "Saurabh" }
+    { name = "Saurabh Kumbhar" }
 ]
 dependencies = [
     "requests>=2.25"
@@ -27,9 +27,9 @@ classifiers = [
 dev = ["pytest>=7.0"]
 
 [project.urls]
-Homepage = "https://github.com/YOUR_USERNAME/polygate"
-Repository = "https://github.com/YOUR_USERNAME/polygate"
-Issues = "https://github.com/YOUR_USERNAME/polygate/issues"
+Homepage = "https://github.com/SaurabhKumbhar24/polygate"
+Repository = "https://github.com/SaurabhKumbhar24/polygate"
+Issues = "https://github.com/SaurabhKumbhar24/polygate/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["polygate"]
