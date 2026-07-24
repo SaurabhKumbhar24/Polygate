@@ -3,8 +3,10 @@
 Thanks for considering a contribution. The scope of this project is
 intentionally narrow — a thin, consistent wrapper around LLM provider
 APIs — so the bar for "does this belong here" is: *does it help
-normalize calling different providers through one interface?* Features
-like retries, caching, cost tracking, and routing are explicitly
+normalize calling different providers through one interface?* Beyond
+that core, `polygate` ships a small set of opt-in reliability helpers
+(`Retry` and `KeyPool`) that stay provider-agnostic. Broader
+middleware concerns like caching, cost tracking, and routing remain
 out of scope; wrap `polygate` with your own middleware for those.
 
 ## Running from source

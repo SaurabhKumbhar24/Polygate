@@ -1,4 +1,4 @@
-import { MissingAPIKeyError, ProviderAPIError } from "../errors";
+import { execute, resolveKeys } from "../retry";
 import { ChatResponse, Message, ProviderChatOptions } from "../types";
 
 const API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
@@ -27,12 +27,7 @@ function toGeminiContents(messages: Message[]): {
 export async function chat(
   options: ProviderChatOptions
 ): Promise<ChatResponse> {
-  const key = options.apiKey || process.env[ENV_VAR];
-  if (!key) {
-    throw new MissingAPIKeyError(
-      `No Gemini API key provided. Pass apiKey or set ${ENV_VAR}.`
-    );
-  }
+  const pool = resolveKeys(options.apiKey, ENV_VAR, "gemini");
 
   const { contents, systemInstruction } = toGeminiContents(options.messages);
 
@@ -45,16 +40,19 @@ export async function chat(
     payload.systemInstruction = { parts: [{ text: systemInstruction }] };
   }
 
-  const url = `${API_BASE}/${options.model}:generateContent?key=${key}`;
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
+  const attempt = (key: string) => {
+    // Gemini authenticates via a query parameter rather than a header, so
+    // the URL is rebuilt per attempt as the pool rotates keys.
+    const url = `${API_BASE}/${options.model}:generateContent?key=${key}`;
+    return fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+    });
+  };
 
-  if (!response.ok) {
-    throw new ProviderAPIError("gemini", response.status, await response.text());
-  }
+  const response = await execute("gemini", pool, attempt, options.retry);
+
 
   const data = await response.json();
   const candidate = data.candidates[0];

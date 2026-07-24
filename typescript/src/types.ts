@@ -1,3 +1,5 @@
+import type { KeyInput, Retry } from "./retry";
+
 export interface Message {
   role: "system" | "user" | "assistant";
   content: string;
@@ -21,9 +23,21 @@ export interface ChatResponse {
 interface ChatOptionsBase {
   model: string;
   messages: Message[];
-  apiKey?: string;
+  /**
+   * A single key, a list of keys, or a reusable KeyPool. With more than one,
+   * requests rotate round-robin; a rejected key is dropped and a rate-limited
+   * one is parked while traffic moves on. Omitted falls back to the provider's
+   * environment variable, which may itself hold a comma-separated list.
+   */
+  apiKey?: KeyInput;
   temperature?: number;
   maxTokens?: number;
+  /**
+   * Omitted means no retries: one request, one response. `{}` opts into
+   * exponential backoff with jitter on transient failures while still failing
+   * fast on deterministic ones (400, 404, 422).
+   */
+  retry?: Retry;
 }
 
 // Intersecting (rather than adding an index signature directly to the

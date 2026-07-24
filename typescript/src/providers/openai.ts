@@ -1,4 +1,4 @@
-import { MissingAPIKeyError, ProviderAPIError } from "../errors";
+import { execute, resolveKeys } from "../retry";
 import { ChatResponse, ProviderChatOptions } from "../types";
 
 const API_URL = "https://api.openai.com/v1/chat/completions";
@@ -7,12 +7,7 @@ const ENV_VAR = "OPENAI_API_KEY";
 export async function chat(
   options: ProviderChatOptions
 ): Promise<ChatResponse> {
-  const key = options.apiKey || process.env[ENV_VAR];
-  if (!key) {
-    throw new MissingAPIKeyError(
-      `No OpenAI API key provided. Pass apiKey or set ${ENV_VAR}.`
-    );
-  }
+  const pool = resolveKeys(options.apiKey, ENV_VAR, "openai");
 
   const payload: Record<string, unknown> = {
     model: options.model,
@@ -21,18 +16,18 @@ export async function chat(
   if (options.temperature !== undefined) payload.temperature = options.temperature;
   if (options.maxTokens !== undefined) payload.max_tokens = options.maxTokens;
 
-  const response = await fetch(API_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
+  const attempt = (key: string) =>
+    fetch(API_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
 
-  if (!response.ok) {
-    throw new ProviderAPIError("openai", response.status, await response.text());
-  }
+  const response = await execute("openai", pool, attempt, options.retry);
+
 
   const data = await response.json();
   const choice = data.choices[0];

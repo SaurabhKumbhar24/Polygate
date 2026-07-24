@@ -1,4 +1,4 @@
-import { MissingAPIKeyError, ProviderAPIError } from "../errors";
+import { execute, resolveKeys } from "../retry";
 import { ChatResponse, ProviderChatOptions } from "../types";
 
 const API_URL = "https://api.anthropic.com/v1/messages";
@@ -9,12 +9,7 @@ const DEFAULT_MAX_TOKENS = 1024;
 export async function chat(
   options: ProviderChatOptions
 ): Promise<ChatResponse> {
-  const key = options.apiKey || process.env[ENV_VAR];
-  if (!key) {
-    throw new MissingAPIKeyError(
-      `No Anthropic API key provided. Pass apiKey or set ${ENV_VAR}.`
-    );
-  }
+  const pool = resolveKeys(options.apiKey, ENV_VAR, "anthropic");
 
   // Anthropic takes "system" as a top-level field, not a message role.
   let system: string | undefined;
@@ -36,19 +31,19 @@ export async function chat(
   if (system) payload.system = system;
   if (options.temperature !== undefined) payload.temperature = options.temperature;
 
-  const response = await fetch(API_URL, {
-    method: "POST",
-    headers: {
-      "x-api-key": key,
-      "anthropic-version": ANTHROPIC_VERSION,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
+  const attempt = (key: string) =>
+    fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "x-api-key": key,
+        "anthropic-version": ANTHROPIC_VERSION,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
 
-  if (!response.ok) {
-    throw new ProviderAPIError("anthropic", response.status, await response.text());
-  }
+  const response = await execute("anthropic", pool, attempt, options.retry);
+
 
   const data = await response.json();
   const content = (data.content || [])

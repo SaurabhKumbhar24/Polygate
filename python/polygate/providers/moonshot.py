@@ -1,9 +1,8 @@
-import os
 from typing import Any, Dict, List, Optional
 
 import requests
 
-from ..exceptions import MissingAPIKeyError, ProviderAPIError
+from ..retry import KeyInput, Retry, execute, resolve_keys
 from ..types import ChatResponse, Usage
 
 # Moonshot's API (used to access Kimi K2 and other Moonshot models) is
@@ -16,16 +15,13 @@ def chat(
     *,
     model: str,
     messages: List[Dict[str, str]],
-    api_key: Optional[str] = None,
+    api_key: KeyInput = None,
     temperature: Optional[float] = None,
     max_tokens: Optional[int] = None,
+    retry: Optional[Retry] = None,
     **kwargs: Any,
 ) -> ChatResponse:
-    key = api_key or os.environ.get(ENV_VAR)
-    if not key:
-        raise MissingAPIKeyError(
-            f"No Moonshot API key provided. Pass api_key= or set {ENV_VAR}."
-        )
+    pool = resolve_keys(api_key, ENV_VAR, "moonshot")
 
     payload: Dict[str, Any] = {"model": model, "messages": messages}
     if temperature is not None:
@@ -34,17 +30,18 @@ def chat(
         payload["max_tokens"] = max_tokens
     payload.update(kwargs)
 
-    response = requests.post(
-        API_URL,
-        headers={
-            "Authorization": f"Bearer {key}",
-            "Content-Type": "application/json",
-        },
-        json=payload,
-        timeout=120,
-    )
-    if response.status_code != 200:
-        raise ProviderAPIError("moonshot", response.status_code, response.text)
+    def _attempt(key: str):
+        return requests.post(
+            API_URL,
+            headers={
+                "Authorization": f"Bearer {key}",
+                "Content-Type": "application/json",
+            },
+            json=payload,
+            timeout=120,
+        )
+
+    response = execute("moonshot", pool, _attempt, retry)
 
     data = response.json()
     choice = data["choices"][0]

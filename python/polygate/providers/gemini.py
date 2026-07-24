@@ -1,9 +1,8 @@
-import os
 from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 
-from ..exceptions import MissingAPIKeyError, ProviderAPIError
+from ..retry import KeyInput, Retry, execute, resolve_keys
 from ..types import ChatResponse, Usage
 
 API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
@@ -29,16 +28,13 @@ def chat(
     *,
     model: str,
     messages: List[Dict[str, str]],
-    api_key: Optional[str] = None,
+    api_key: KeyInput = None,
     temperature: Optional[float] = None,
     max_tokens: Optional[int] = None,
+    retry: Optional[Retry] = None,
     **kwargs: Any,
 ) -> ChatResponse:
-    key = api_key or os.environ.get(ENV_VAR)
-    if not key:
-        raise MissingAPIKeyError(
-            f"No Gemini API key provided. Pass api_key= or set {ENV_VAR}."
-        )
+    pool = resolve_keys(api_key, ENV_VAR, "gemini")
 
     contents, system_instruction = _to_gemini_contents(messages)
 
@@ -54,10 +50,13 @@ def chat(
         payload["systemInstruction"] = {"parts": [{"text": system_instruction}]}
     payload.update(kwargs)
 
-    url = f"{API_BASE}/{model}:generateContent?key={key}"
-    response = requests.post(url, json=payload, timeout=120)
-    if response.status_code != 200:
-        raise ProviderAPIError("gemini", response.status_code, response.text)
+    def _attempt(key: str):
+        # Gemini authenticates via a query parameter rather than a header, so
+        # the URL is rebuilt per attempt as the pool rotates keys.
+        url = f"{API_BASE}/{model}:generateContent?key={key}"
+        return requests.post(url, json=payload, timeout=120)
+
+    response = execute("gemini", pool, _attempt, retry)
 
     data = response.json()
     candidate = data["candidates"][0]

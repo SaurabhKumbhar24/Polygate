@@ -58,8 +58,8 @@ readable in under 100 lines.
 | Python | `polygate` | `pip install polygate` |
 | TypeScript / JavaScript | `polygate` | `npm install polygate` |
 
-*(Not published yet — see [CONTRIBUTING.md](./CONTRIBUTING.md) for
-running from source.)*
+Both packages are published at `0.1.0`. To run from source instead, see
+[CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## Supported providers
 
@@ -106,11 +106,13 @@ know about them ahead of time.
 
 ```
 polygate/
-├── python/       # pip package
-├── typescript/   # npm package
-├── README.md
-├── CONTRIBUTING.md
-└── LICENSE
+├── sdk/
+│   ├── python/       # pip package
+│   ├── typescript/   # npm package
+│   ├── README.md
+│   ├── CONTRIBUTING.md
+│   └── LICENSE
+└── website/          # polygate.getfluiq.com (Next.js, static export)
 ```
 
 ## Contributing

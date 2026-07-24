@@ -1,6 +1,6 @@
 {
   "name": "polygate",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "One consistent function to call any LLM provider — Anthropic, OpenAI, Gemini, Moonshot, and more.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
