@@ -2,6 +2,10 @@
 
 One function. Any LLM provider.
 
+[![PyPI](https://img.shields.io/pypi/v/polygate?label=pypi)](https://pypi.org/project/polygate/)
+[![npm](https://img.shields.io/npm/v/polygate?label=npm)](https://www.npmjs.com/package/polygate)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+
 `polygate` is a tiny, dependency-light wrapper that gives you a single
 consistent interface for calling Anthropic (Claude), OpenAI, Google
 Gemini, and Moonshot (Kimi K2) — instead of learning four different
@@ -119,6 +123,23 @@ polygate/
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md). Adding a new provider is
 usually just: one new adapter file + one line in the registry.
+
+## Who builds this
+
+`polygate` is maintained by the people behind
+[Fluiq](https://getfluiq.com), which handles the layer above this one:
+tracing, evals, and output guardrails for agents running in production.
+
+Keeping all of that *out* of `polygate` is deliberate. This stays a
+wrapper you can depend on without buying into anything else, and it has
+no dependency on Fluiq in either direction.
+
+If you're curious what an output guardrail actually catches, there's a
+free demo with no account required:
+[what an LLM still leaks after it refuses](https://getfluiq.com/response-gate-demo).
+It runs five real prompt-injection and data-exfiltration attacks against
+Claude Haiku 4.5 — which refused all five, and still put customer PII in
+two of the refusals.
 
 ## License
 

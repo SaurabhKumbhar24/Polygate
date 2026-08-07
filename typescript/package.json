@@ -23,6 +23,15 @@
     "moonshot",
     "kimi"
   ],
+  "homepage": "https://polygate.getfluiq.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SaurabhKumbhar24/polygate.git",
+    "directory": "sdk/typescript"
+  },
+  "bugs": {
+    "url": "https://github.com/SaurabhKumbhar24/polygate/issues"
+  },
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^20.11.0",

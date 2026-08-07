@@ -27,7 +27,8 @@ classifiers = [
 dev = ["pytest>=7.0"]
 
 [project.urls]
-Homepage = "https://github.com/SaurabhKumbhar24/polygate"
+Homepage = "https://polygate.getfluiq.com"
+Documentation = "https://polygate.getfluiq.com"
 Repository = "https://github.com/SaurabhKumbhar24/polygate"
 Issues = "https://github.com/SaurabhKumbhar24/polygate/issues"
 
