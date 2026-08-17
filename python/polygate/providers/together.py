@@ -1,0 +1,11 @@
+"""Together AI's hosted open-weight models.
+
+An OpenAI-compatible endpoint; see ``_openai_compatible`` for the shared
+implementation and why it is shared.
+"""
+from ._openai_compatible import make_adapter
+
+API_URL = "https://api.together.xyz/v1/chat/completions"
+ENV_VAR = "TOGETHER_API_KEY"
+
+chat = make_adapter(provider="together", api_url=API_URL, env_var=ENV_VAR)

@@ -17,7 +17,7 @@ def test_missing_api_key_raises(monkeypatch):
         chat(provider="openai", model="gpt-4o", messages=[{"role": "user", "content": "hi"}])
 
 
-@patch("polygate.providers.openai.requests.post")
+@patch("polygate.providers._openai_compatible.requests.post")
 def test_openai_chat_success(mock_post):
     mock_response = MagicMock()
     mock_response.status_code = 200
@@ -85,7 +85,7 @@ def test_gemini_chat_success(mock_post):
     assert result.provider == "gemini"
 
 
-@patch("polygate.providers.moonshot.requests.post")
+@patch("polygate.providers._openai_compatible.requests.post")
 def test_moonshot_chat_success(mock_post):
     mock_response = MagicMock()
     mock_response.status_code = 200
@@ -106,7 +106,7 @@ def test_moonshot_chat_success(mock_post):
     assert result.provider == "moonshot"
 
 
-@patch("polygate.providers.openai.requests.post")
+@patch("polygate.providers._openai_compatible.requests.post")
 def test_provider_api_error_raised(mock_post):
     from polygate.exceptions import ProviderAPIError
 

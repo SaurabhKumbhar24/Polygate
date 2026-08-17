@@ -19,6 +19,20 @@ export class MissingAPIKeyError extends PolygateError {
   }
 }
 
+/**
+ * Thrown when a provider that has no fixed host is called without one.
+ *
+ * Kept distinct from a missing key because the fix is different: Databricks,
+ * Cloudflare, Azure and Vertex serve from a URL containing your own workspace,
+ * account, resource or project, so there is nothing to default to.
+ */
+export class MissingEndpointError extends PolygateError {
+  constructor(message: string) {
+    super(message);
+    this.name = "MissingEndpointError";
+  }
+}
+
 export class ProviderAPIError extends PolygateError {
   provider: string;
   statusCode: number;

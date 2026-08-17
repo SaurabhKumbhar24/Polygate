@@ -7,15 +7,15 @@ One function. Any LLM provider.
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 `polygate` is a tiny, dependency-light wrapper that gives you a single
-consistent interface for calling Anthropic (Claude), OpenAI, Google
-Gemini, and Moonshot (Kimi K2) — instead of learning four different
-SDKs and four different response shapes.
+consistent interface for calling 26 LLM providers, clouds and gateways — and anything you host
+yourself — instead of learning a different SDK and a different response shape
+for each.
 
 ```python
 from polygate import chat
 
 response = chat(
-    provider="anthropic",       # or "openai", "gemini", "moonshot"
+    provider="anthropic",       # or "openai", "gemini", "groq", "mistral", …
     model="claude-sonnet-4-6",
     messages=[{"role": "user", "content": "Say hi in one word."}],
     api_key="sk-...",           # or set ANTHROPIC_API_KEY in the environment
@@ -69,10 +69,123 @@ Both packages are published at `0.1.0`. To run from source instead, see
 
 | Provider | Aliases | Env var fallback |
 |---|---|---|
-| Anthropic (Claude) | `anthropic`, `claude` | `ANTHROPIC_API_KEY` |
 | OpenAI | `openai`, `gpt` | `OPENAI_API_KEY` |
+| Anthropic (Claude) | `anthropic`, `claude` | `ANTHROPIC_API_KEY` |
 | Google Gemini | `gemini`, `google` | `GEMINI_API_KEY` |
+| Mistral | `mistral` | `MISTRAL_API_KEY` |
+| Groq | `groq` | `GROQ_API_KEY` |
+| Together AI | `together`, `togetherai` | `TOGETHER_API_KEY` |
+| Fireworks | `fireworks` | `FIREWORKS_API_KEY` |
+| Perplexity (Sonar) | `perplexity`, `sonar`, `pplx` | `PERPLEXITY_API_KEY` |
+| xAI (Grok) | `xai`, `grok` | `XAI_API_KEY` |
+| Cerebras | `cerebras` | `CEREBRAS_API_KEY` |
+| DeepSeek | `deepseek` | `DEEPSEEK_API_KEY` |
 | Moonshot (Kimi K2) | `moonshot`, `kimi` | `MOONSHOT_API_KEY` |
+| Z.AI (GLM) | `zai`, `z.ai`, `glm`, `zhipu`, `bigmodel` | `ZAI_API_KEY` |
+
+**Clouds** — these need an endpoint or region as well as a credential, because
+the URL contains your own resource. See [Clouds](#clouds).
+
+| Cloud | Aliases | Credential |
+|---|---|---|
+| Amazon Bedrock | `bedrock`, `aws` | `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` |
+| Azure OpenAI | `azure`, `azure_openai` | `AZURE_OPENAI_API_KEY` + `AZURE_OPENAI_ENDPOINT` |
+| Google Vertex AI | `vertex`, `vertexai` | `GOOGLE_ACCESS_TOKEN` + `VERTEX_BASE_URL` |
+| Databricks | `databricks` | `DATABRICKS_TOKEN` + `DATABRICKS_HOST` |
+| Cloudflare Workers AI | `cloudflare`, `workers-ai` | `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` |
+
+**Gateways** — one key, many vendors. Model ids are usually `vendor/model`.
+
+| Gateway | Aliases | Env var fallback |
+|---|---|---|
+| OpenRouter | `openrouter` | `OPENROUTER_API_KEY` |
+| Vercel AI Gateway | `vercel`, `ai-gateway` | `AI_GATEWAY_API_KEY` |
+| Baseten | `baseten` | `BASETEN_API_KEY` |
+| DeepInfra | `deepinfra` | `DEEPINFRA_API_KEY` |
+| SambaNova | `sambanova` | `SAMBANOVA_API_KEY` |
+| Nebius AI Studio | `nebius` | `NEBIUS_API_KEY` |
+| Novita AI | `novita` | `NOVITA_API_KEY` |
+| Hyperbolic | `hyperbolic` | `HYPERBOLIC_API_KEY` |
+
+| Anything else | Aliases | Env var fallback |
+|---|---|---|
+| Your own endpoint | `custom`, `ollama`, `local`, `vllm` | `POLYGATE_BASE_URL` |
+
+### Z.AI and the mainland endpoint
+
+Z.AI serves GLM from two platforms with **non-interchangeable keys**:
+`api.z.ai` internationally (the default) and `open.bigmodel.cn` in mainland
+China. They are the same API on a different host, so there is no second
+provider — pass the other host as `base_url`:
+
+```python
+polygate.chat(
+    provider="zai",
+    base_url="https://open.bigmodel.cn/api/paas/v4",
+    model="glm-4.6",
+    messages=[{"role": "user", "content": "hi"}],
+)
+```
+
+### Clouds
+
+Amazon Bedrock goes through the **Converse** API, so one message shape works
+across every model AWS hosts. Credentials come from the standard AWS variables:
+
+```python
+polygate.chat(
+    provider="bedrock",
+    model="anthropic.claude-3-5-sonnet-20241022-v2:0",
+    messages=[{"role": "user", "content": "hi"}],
+    region="us-west-2",   # or $AWS_REGION, default us-east-1
+)
+```
+
+Requests are signed with SigV4, implemented here in ~60 lines of stdlib rather
+than by depending on boto3 — someone installing polygate to call OpenAI should
+not pay for an AWS SDK. The signer is diffed against botocore in the test suite,
+and the TypeScript one is pinned to the same outputs, so neither can drift.
+
+Temporary credentials work by appending the session token:
+`ACCESS_KEY:SECRET:SESSION_TOKEN`. A list of those rotates exactly like a list
+of OpenAI keys.
+
+Azure needs its resource host, and the `model` is your **deployment name**, not
+a vendor model id:
+
+```python
+polygate.chat(
+    provider="azure",
+    base_url="https://my-resource.openai.azure.com",   # or $AZURE_OPENAI_ENDPOINT
+    model="my-gpt4o-deployment",
+    messages=[{"role": "user", "content": "hi"}],
+)
+```
+
+Vertex authenticates with a short-lived OAuth access token rather than an API
+key — `gcloud auth print-access-token` — which expires in about an hour.
+
+### Your own endpoint
+
+Ollama, vLLM, LM Studio, llama.cpp's server, TGI, a corporate gateway — all of
+them speak the OpenAI chat-completions format, so none needs its own adapter.
+Point `base_url` at it:
+
+```python
+chat(
+    provider="ollama",
+    model="llama3.1:8b",
+    base_url="http://localhost:11434/v1",
+    messages=[{"role": "user", "content": "hello"}],
+)
+```
+
+No API key is required for this provider — a local runtime usually has none, and
+demanding one would fail the common case for a reason that doesn't exist. Set
+`POLYGATE_BASE_URL` to skip passing `base_url` every time.
+
+`base_url` also works on every other provider, so a regional endpoint or a proxy
+needs no new code.
 
 ## The unified message format
 
