@@ -80,10 +80,14 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          # 22, not 20: GitHub is deprecating Node 20 on runners, and current
+          # npm refuses to install on it (npm 12 requires >= 22.22). The
+          # package itself still supports Node >= 18 — this is only the
+          # toolchain that builds and publishes it.
+          node-version: "22"
           registry-url: "https://registry.npmjs.org"
 
-      # Trusted publishing needs npm >= 11.5.1, and Node 20 ships npm 10.x.
+      # Trusted publishing needs npm >= 11.5.1, and the bundled npm is older.
       # Harmless when publishing with a token, so it is unconditional rather
       # than another branch to keep straight.
       - name: Upgrade npm
