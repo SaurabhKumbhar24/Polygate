@@ -100,30 +100,6 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Local version: $VERSION"
 
-      # Proves the credential works *before* building, and says which account
-      # it belongs to. npm answers an unauthorized publish with 404 rather than
-      # 401, so without this the failure reads as "the package does not exist"
-      # — which sends you looking in entirely the wrong place. It cost an
-      # afternoon once; it does not need to twice.
-      - name: Check npm auth
-        id: auth
-        continue-on-error: true
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          if [ -z "$NODE_AUTH_TOKEN" ]; then
-            echo "::error::NPM_TOKEN secret is empty or unset."
-            exit 1
-          fi
-          WHO=$(npm whoami 2>&1) || {
-            echo "::error::NPM_TOKEN did not authenticate: $WHO"
-            echo "Mint a granular token with Read and write on the 'polygate'"
-            echo "package, or configure trusted publishing on npmjs.com."
-            exit 1
-          }
-          echo "Authenticated as: $WHO"
-          echo "user=$WHO" >> "$GITHUB_OUTPUT"
-
       - name: Check if version already on npm
         id: check
         run: |
@@ -134,6 +110,32 @@ jobs:
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
+
+      # Runs only when a publish is actually going to happen, and fails hard.
+      #
+      # npm answers an unauthorized publish with 404, not 401, so the raw
+      # failure reads as "the package does not exist" and sends you looking in
+      # entirely the wrong place — it is worth twenty seconds to be told the
+      # truth instead. Gated on the version check so an ordinary commit with no
+      # version bump does not go red over a credential it never uses.
+      - name: Check npm auth
+        if: steps.check.outputs.exists == 'false'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "::error::NPM_TOKEN is empty or unset."
+            exit 1
+          fi
+          if ! WHO=$(npm whoami 2>&1); then
+            echo "::error::NPM_TOKEN did not authenticate (npm said: $WHO)"
+            echo "Fix: sign in to npmjs.com as a maintainer of 'polygate'"
+            echo "(currently: fluiq), create a Granular Access Token with"
+            echo "Read and write on that package, and update the NPM_TOKEN"
+            echo "repository secret. Then re-run this workflow."
+            exit 1
+          fi
+          echo "Authenticated as: $WHO"
 
       - name: Install dependencies
         if: steps.check.outputs.exists == 'false'
