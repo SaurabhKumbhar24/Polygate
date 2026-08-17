@@ -83,12 +83,42 @@ jobs:
           node-version: "20"
           registry-url: "https://registry.npmjs.org"
 
+      # Trusted publishing needs npm >= 11.5.1, and Node 20 ships npm 10.x.
+      # Harmless when publishing with a token, so it is unconditional rather
+      # than another branch to keep straight.
+      - name: Upgrade npm
+        run: npm install -g npm@latest
+
       - name: Read version
         id: ver
         run: |
           VERSION=$(node -p "require('./package.json').version")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Local version: $VERSION"
+
+      # Proves the credential works *before* building, and says which account
+      # it belongs to. npm answers an unauthorized publish with 404 rather than
+      # 401, so without this the failure reads as "the package does not exist"
+      # — which sends you looking in entirely the wrong place. It cost an
+      # afternoon once; it does not need to twice.
+      - name: Check npm auth
+        id: auth
+        continue-on-error: true
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "::error::NPM_TOKEN secret is empty or unset."
+            exit 1
+          fi
+          WHO=$(npm whoami 2>&1) || {
+            echo "::error::NPM_TOKEN did not authenticate: $WHO"
+            echo "Mint a granular token with Read and write on the 'polygate'"
+            echo "package, or configure trusted publishing on npmjs.com."
+            exit 1
+          }
+          echo "Authenticated as: $WHO"
+          echo "user=$WHO" >> "$GITHUB_OUTPUT"
 
       - name: Check if version already on npm
         id: check
@@ -113,6 +143,10 @@ jobs:
         if: steps.check.outputs.exists == 'false'
         run: npm run build
 
+      # --provenance is omitted deliberately: it requires id-token: write and
+      # signs the tarball against this workflow. Worth turning on, but not in
+      # the same change as fixing auth — two variables at once makes a failure
+      # ambiguous.
       - name: Publish to npm
         if: steps.check.outputs.exists == 'false'
         env:
