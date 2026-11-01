@@ -42,9 +42,7 @@ This repo isn't trying to out-feature mature gateways like LiteLLM,
 Portkey, or Helicone — it's a small, boring, easy-to-read wrapper built
 to be genuinely simple to depend on and easy to maintain. Contributions
 are welcome, but the scope is intentionally kept narrow: normalize the
-request/response shape across providers, nothing more (no built-in
-retries, caching, or routing logic — bring your own if you need them,
-or build them on top).
+request/response shape across providers, nothing more.
 
 ## Why this exists
 
